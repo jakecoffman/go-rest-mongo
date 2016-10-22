@@ -6,6 +6,10 @@ import (
 	"errors"
 )
 
+const (
+	USER_COLLECTION = "users"
+)
+
 type User struct {
 	Id       bson.ObjectId `bson:"_id"`
 	Name     string
@@ -22,18 +26,18 @@ type Repository interface {
 }
 
 type UserRepository struct {
-	collection *mgo.Collection
+	db *mgo.Database
 }
 
-func NewUserRepository(collection *mgo.Collection) *UserRepository {
+func NewUserRepository(db *mgo.Database) *UserRepository {
 	return &UserRepository{
-		collection: collection,
+		db: db,
 	}
 }
 
 func (u *UserRepository) List(query map[string]interface{}, limit int, sort ...string) (interface{}, error) {
 	users := []User{}
-	err := u.collection.Find(query).Sort(sort...).Limit(limit).All(&users)
+	err := u.db.C(USER_COLLECTION).Find(query).Sort(sort...).Limit(limit).All(&users)
 	return users, err
 }
 
@@ -42,6 +46,6 @@ func (u *UserRepository) Get(id string) (interface{}, error) {
 		return nil, errors.New("that's no id")
 	}
 	user := User{}
-	err := u.collection.FindId(bson.ObjectIdHex(id)).One(&user)
+	err := u.db.C(USER_COLLECTION).FindId(bson.ObjectIdHex(id)).One(&user)
 	return user, err
 }

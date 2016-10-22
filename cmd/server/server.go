@@ -9,10 +9,6 @@ import (
 	"github.com/jakecoffman/go-rest-mongo/models"
 )
 
-const (
-	USER_COLLECTION = "users"
-)
-
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
@@ -26,7 +22,7 @@ func main() {
 	// For bootstrapping
 	db.DropDatabase()
 	for i := 0; i < 1000; i++ {
-		db.C(USER_COLLECTION).Insert(models.User{
+		db.C(models.USER_COLLECTION).Insert(models.User{
 			Id: bson.NewObjectId(),
 			Name: "Bootstrap",
 			Username: "bstrap",
@@ -46,8 +42,7 @@ func main() {
 	})
 	userGroup := r.Group("/users")
 	{
-		collection := db.C(USER_COLLECTION)
-		repo := models.NewUserRepository(collection)
+		repo := models.NewUserRepository(db)
 		userResource := controllers.NewGenericController(repo)
 		userGroup.GET("/", userResource.List)
 		userGroup.GET("/:id", userResource.Get)
