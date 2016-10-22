@@ -6,6 +6,11 @@ import (
 	"log"
 	"gopkg.in/mgo.v2"
 	"github.com/jakecoffman/go-rest-mongo/controllers"
+	"github.com/jakecoffman/go-rest-mongo/models"
+)
+
+const (
+	USER_COLLECTION = "users"
 )
 
 func main() {
@@ -20,6 +25,20 @@ func main() {
 
 	// For bootstrapping
 	db.DropDatabase()
+	for i := 0; i < 1000; i++ {
+		db.C(USER_COLLECTION).Insert(models.User{
+			Id: bson.NewObjectId(),
+			Name: "Bootstrap",
+			Username: "bstrap",
+			Cats: []models.Cat{
+				{Name: "Meowers"},
+				{Name: "Ruffletuff"},
+				{Name: "Zebra"},
+				{Name: "Paws"},
+				{Name: "Tiger"},
+			},
+		})
+	}
 
 	r := gin.Default()
 	r.GET("/", func(ctx *gin.Context) {
@@ -27,7 +46,9 @@ func main() {
 	})
 	userGroup := r.Group("/users")
 	{
-		userResource := controllers.NewUserController(db)
+		collection := db.C(USER_COLLECTION)
+		repo := models.NewUserRepository(collection)
+		userResource := controllers.NewGenericController(repo)
 		userGroup.GET("/", userResource.List)
 		userGroup.GET("/:id", userResource.Get)
 	}
