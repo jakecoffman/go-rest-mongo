@@ -27,7 +27,7 @@ func main() {
 	})
 	userGroup := r.Group("/users")
 	{
-		userResource := controllers.NewUserResource(db)
+		userResource := controllers.NewUserController(db)
 		userGroup.GET("/", userResource.List)
 		userGroup.GET("/:id", userResource.Get)
 	}
