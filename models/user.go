@@ -2,12 +2,9 @@ package models
 
 import (
 	"gopkg.in/mgo.v2/bson"
-	"gopkg.in/mgo.v2"
 	"errors"
-)
-
-const (
-	USER_COLLECTION = "users"
+	"encoding/json"
+	"github.com/jakecoffman/go-rest-mongo/datastore"
 )
 
 type User struct {
@@ -15,6 +12,23 @@ type User struct {
 	Name     string
 	Username string
 	Cats     []Cat
+	DogIds   []bson.ObjectId `json:"-"`
+}
+
+func (u *User) MarshalJSON() ([]byte, error) {
+	dogs := []Dog{}
+	if err := datastore.Dog().Find(bson.M{"_id": bson.M{"$in": u.DogIds}}).All(&dogs); err != nil {
+		return nil, err
+	}
+
+	type Alias User
+	return json.Marshal(&struct {
+		*Alias
+		Dogs []Dog
+	}{
+		Alias: (*Alias)(u),
+		Dogs: dogs,
+	})
 }
 
 type Repository interface {
@@ -25,19 +39,15 @@ type Repository interface {
 	//Delete(id string)
 }
 
-type UserRepository struct {
-	db *mgo.Database
-}
+type UserRepository struct {}
 
-func NewUserRepository(db *mgo.Database) *UserRepository {
-	return &UserRepository{
-		db: db,
-	}
+func NewUserRepository() *UserRepository {
+	return &UserRepository{}
 }
 
 func (u *UserRepository) List(query map[string]interface{}, limit int, sort ...string) (interface{}, error) {
 	users := []User{}
-	err := u.db.C(USER_COLLECTION).Find(query).Sort(sort...).Limit(limit).All(&users)
+	err := datastore.User().Find(query).Sort(sort...).Limit(limit).All(&users)
 	return users, err
 }
 
@@ -46,6 +56,6 @@ func (u *UserRepository) Get(id string) (interface{}, error) {
 		return nil, errors.New("that's no id")
 	}
 	user := User{}
-	err := u.db.C(USER_COLLECTION).FindId(bson.ObjectIdHex(id)).One(&user)
+	err := datastore.User().FindId(bson.ObjectIdHex(id)).One(&user)
 	return user, err
 }

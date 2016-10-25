@@ -1,30 +1,29 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"gopkg.in/mgo.v2/bson"
 	"log"
-	"gopkg.in/mgo.v2"
+
+	"github.com/gin-gonic/gin"
 	"github.com/jakecoffman/go-rest-mongo/controllers"
+	"github.com/jakecoffman/go-rest-mongo/datastore"
 	"github.com/jakecoffman/go-rest-mongo/models"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	session, err := mgo.Dial("127.0.0.1:27017")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer session.Close()
-	db := session.DB("test")
-
 	// For bootstrapping
-	db.DropDatabase()
+	datastore.DB().DropDatabase()
 	for i := 0; i < 1000; i++ {
-		db.C(models.USER_COLLECTION).Insert(models.User{
-			Id: bson.NewObjectId(),
-			Name: "Bootstrap",
+		dogId := bson.NewObjectId()
+		datastore.Dog().Insert(models.Dog{
+			Id:   dogId,
+			Name: "Rex",
+		})
+		datastore.User().Insert(models.User{
+			Id:       bson.NewObjectId(),
+			Name:     "Bootstrap",
 			Username: "bstrap",
 			Cats: []models.Cat{
 				{Name: "Meowers"},
@@ -33,6 +32,7 @@ func main() {
 				{Name: "Paws"},
 				{Name: "Tiger"},
 			},
+			DogIds: []bson.ObjectId{dogId},
 		})
 	}
 
@@ -42,7 +42,7 @@ func main() {
 	})
 	userGroup := r.Group("/users")
 	{
-		repo := models.NewUserRepository(db)
+		repo := models.NewUserRepository()
 		userResource := controllers.NewGenericController(repo)
 		userGroup.GET("/", userResource.List)
 		userGroup.GET("/:id", userResource.Get)
