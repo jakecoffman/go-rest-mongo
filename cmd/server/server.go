@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jakecoffman/go-rest-mongo/controllers"
 	"github.com/jakecoffman/go-rest-mongo/datastore"
+	"github.com/jakecoffman/go-rest-mongo/framework"
 	"github.com/jakecoffman/go-rest-mongo/models"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -15,7 +15,7 @@ func main() {
 
 	// For bootstrapping
 	datastore.DB().DropDatabase()
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10; i++ {
 		dogId := bson.NewObjectId()
 		datastore.Dog().Insert(models.Dog{
 			Id:   dogId,
@@ -43,9 +43,12 @@ func main() {
 	userGroup := r.Group("/users")
 	{
 		repo := models.NewUserRepository()
-		userResource := controllers.NewGenericController(repo)
+		userResource := framework.NewGenericController(repo)
 		userGroup.GET("/", userResource.List)
 		userGroup.GET("/:id", userResource.Get)
+		userGroup.POST("/", userResource.Create)
+		userGroup.PUT("/:id", userResource.Update)
+		userGroup.DELETE("/:id", userResource.Delete)
 	}
 	log.Fatal(r.Run("0.0.0.0:9898"))
 }

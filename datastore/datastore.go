@@ -1,8 +1,9 @@
 package datastore
 
 import (
-	"gopkg.in/mgo.v2"
 	"log"
+
+	"gopkg.in/mgo.v2"
 )
 
 type DataStore struct {
@@ -13,7 +14,7 @@ const (
 	database = "test"
 
 	user = "user"
-	dog = "dog"
+	dog  = "dog"
 )
 
 var dataStore *DataStore

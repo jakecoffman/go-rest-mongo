@@ -1,12 +1,15 @@
 package models
 
 import (
-	"gopkg.in/mgo.v2/bson"
-	"errors"
 	"encoding/json"
+	"errors"
+
 	"github.com/jakecoffman/go-rest-mongo/datastore"
+	"github.com/jakecoffman/go-rest-mongo/framework"
+	"gopkg.in/mgo.v2/bson"
 )
 
+// User implements Resource
 type User struct {
 	Id       bson.ObjectId `bson:"_id"`
 	Name     string
@@ -15,34 +18,35 @@ type User struct {
 	DogIds   []bson.ObjectId `json:"-"`
 }
 
+func (u *User) IsValid() bool {
+	return u.Name != "" && u.Username != ""
+}
+
 func (u *User) MarshalJSON() ([]byte, error) {
 	dogs := []Dog{}
 	if err := datastore.Dog().Find(bson.M{"_id": bson.M{"$in": u.DogIds}}).All(&dogs); err != nil {
 		return nil, err
 	}
 
-	type Alias User
+	type UserAlias User // prevents circular reference
 	return json.Marshal(&struct {
-		*Alias
+		*UserAlias
 		Dogs []Dog
 	}{
-		Alias: (*Alias)(u),
-		Dogs: dogs,
+		UserAlias: (*UserAlias)(u),
+		Dogs:      dogs,
 	})
 }
 
-type Repository interface {
-	List(query map[string]interface{}, limit int, sort ...string) (interface{}, error)
-	Get(id string) (interface{}, error)
-	//Insert(interface{}) error
-	//Update(id string, interface{}) error
-	//Delete(id string)
-}
-
-type UserRepository struct {}
+// UserRepository implements Repository
+type UserRepository struct{}
 
 func NewUserRepository() *UserRepository {
 	return &UserRepository{}
+}
+
+func (u *UserRepository) New() framework.Resource {
+	return &User{}
 }
 
 func (u *UserRepository) List(query map[string]interface{}, limit int, sort ...string) (interface{}, error) {
@@ -58,4 +62,28 @@ func (u *UserRepository) Get(id string) (interface{}, error) {
 	user := User{}
 	err := datastore.User().FindId(bson.ObjectIdHex(id)).One(&user)
 	return user, err
+}
+
+func (u *UserRepository) Insert(data interface{}) (interface{}, error) {
+	user := data.(*User)
+	user.Id = bson.NewObjectId()
+
+	err := datastore.User().Insert(user)
+	return user, err
+}
+
+func (u *UserRepository) Update(id string, data interface{}) (interface{}, error) {
+	if !bson.IsObjectIdHex(id) {
+		return nil, errors.New("that's no id")
+	}
+	user := data.(*User)
+	err := datastore.User().UpdateId(bson.ObjectIdHex(id), user)
+	return user, err
+}
+
+func (u *UserRepository) Delete(id string) error {
+	if !bson.IsObjectIdHex(id) {
+		return errors.New("that's no id")
+	}
+	return datastore.User().RemoveId(bson.ObjectIdHex(id))
 }
